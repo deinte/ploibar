@@ -427,7 +427,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
     flex-shrink: 0;
 }
 
-.foot__sync {
+.foot__btn {
     background: none;
     border: none;
     color: var(--label-tertiary);
@@ -435,11 +435,15 @@ input, textarea { -webkit-user-select: text; user-select: text; }
     padding: 4px;
     border-radius: 5px;
     line-height: 0;
-    transition: color 0.15s, background 0.15s, transform 0.15s;
+    transition: color 0.15s, background 0.15s;
 }
 
-.foot__sync:hover { color: var(--label-secondary); background: var(--hover); }
-.foot__sync:active { transform: scale(0.9); }
+.foot__btn:hover { color: var(--label-secondary); background: var(--hover); }
+.foot__btn:active { transform: scale(0.9); }
+
+.foot__sync {
+    transition: color 0.15s, background 0.15s, transform 0.15s;
+}
 
 .icon-sync { width: 13px; height: 13px; fill: currentColor; }
 
@@ -839,19 +843,5 @@ input, textarea { -webkit-user-select: text; user-select: text; }
     align-items: center;
     gap: 2px;
 }
-
-.foot__activity {
-    background: none;
-    border: none;
-    color: var(--label-tertiary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 5px;
-    line-height: 0;
-    transition: color 0.15s, background 0.15s;
-}
-
-.foot__activity:hover { color: var(--label-secondary); background: var(--hover); }
-.foot__activity:active { transform: scale(0.9); }
 
 .icon-activity { width: 13px; height: 13px; }

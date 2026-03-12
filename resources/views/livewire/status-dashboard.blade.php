@@ -62,26 +62,21 @@
                     <button class="btn btn--primary" wire:click="switchView('accounts')">Add Account</button>
                 </div>
             @elseif($this->activeAccount)
-                @php
-                    $projects = $this->activeAccount->projects()->with(['servers.sites'])->get();
-                    $unassignedServers = $this->activeAccount->servers()->with('sites')->whereNull('project_id')->get();
-                @endphp
-
-                @foreach($projects as $project)
+                @foreach($this->projects as $project)
                     <div class="section">{{ $project->title }}</div>
                     @foreach($project->servers as $server)
                         @include('livewire.partials.server-row', ['server' => $server])
                     @endforeach
                 @endforeach
 
-                @if($unassignedServers->isNotEmpty())
+                @if($this->unassignedServers->isNotEmpty())
                     <div class="section">Unassigned</div>
-                    @foreach($unassignedServers as $server)
+                    @foreach($this->unassignedServers as $server)
                         @include('livewire.partials.server-row', ['server' => $server])
                     @endforeach
                 @endif
 
-                @if($projects->isEmpty() && $unassignedServers->isEmpty())
+                @if($this->projects->isEmpty() && $this->unassignedServers->isEmpty())
                     <div class="empty">
                         <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="7" rx="1"/><rect x="2" y="14" width="20" height="7" rx="1"/><circle cx="6" cy="6.5" r="1"/><circle cx="6" cy="17.5" r="1"/></svg>
                         <div class="empty__title">No servers found</div>
@@ -96,14 +91,14 @@
             <span>Last synced: {{ $lastSynced ?? 'never' }}</span>
             <div class="foot__actions">
                 <button
-                    class="foot__activity"
+                    class="foot__btn foot__activity"
                     wire:click="switchView('activity')"
                     title="Activity"
                 >
                     <svg class="icon-activity" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/><polyline points="8 4 8 8 11 10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
                 <button
-                    class="foot__sync"
+                    class="foot__btn foot__sync"
                     wire:click="refresh"
                     title="Refresh"
                     wire:loading.attr="disabled"

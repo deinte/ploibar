@@ -23,9 +23,4 @@ return new class extends Migration
             $table->unique(['account_id', 'ploi_id']);
         });
     }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('servers');
-    }
 };

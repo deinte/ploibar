@@ -18,7 +18,7 @@
         <div class="detail-copyables">
             <div
                 class="detail-copyable"
-                onclick="navigator.clipboard.writeText('{{ $server->ip_address }}').then(() => { this.classList.add('detail-copyable--copied'); setTimeout(() => this.classList.remove('detail-copyable--copied'), 1200) })"
+                onclick="copyText(@js($server->ip_address), this)"
             >
                 <span class="detail-copyable__label">IP</span>
                 <span class="detail-copyable__value">{{ $server->ip_address }}</span>
@@ -30,7 +30,7 @@
             <div class="detail-copyable__sep"></div>
             <div
                 class="detail-copyable"
-                onclick="navigator.clipboard.writeText('ssh ploi@{{ $server->ip_address }}').then(() => { this.classList.add('detail-copyable--copied'); setTimeout(() => this.classList.remove('detail-copyable--copied'), 1200) })"
+                onclick="copyText(@js('ssh ploi@' . $server->ip_address), this)"
             >
                 <span class="detail-copyable__label">SSH</span>
                 <span class="detail-copyable__value">ploi@{{ $server->ip_address }}</span>
@@ -74,7 +74,7 @@
                         <span wire:loading wire:target="deploySite({{ $site->id }})">Deploying&hellip;</span>
                     </button>
 
-                    @php $recentDeploys = $site->deployments()->orderByDesc('triggered_at')->limit(3)->get(); @endphp
+                    @php $recentDeploys = $site->deployments->sortByDesc('triggered_at')->take(3); @endphp
                     @if($recentDeploys->isNotEmpty())
                         <div class="deploy-history">
                             @foreach($recentDeploys as $deploy)

@@ -6,6 +6,8 @@ use Domain\Account\Models\Account;
 use Domain\Ploi\Models\Deployment;
 use Domain\Ploi\Models\Site;
 use Domain\Sync\Jobs\SyncAccountData;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -20,8 +22,6 @@ class StatusDashboard extends Component
 
     public string $view = 'dashboard';
 
-    public bool $syncing = false;
-
     public ?string $lastSynced = null;
 
     /** @var array<int, bool> */
@@ -29,7 +29,7 @@ class StatusDashboard extends Component
 
     public function mount(): void
     {
-        $this->activeAccountId = Account::where('is_active', true)->first()?->id;
+        $this->activeAccountId = $this->defaultAccountId();
     }
 
     public function selectAccount(int $accountId): void
@@ -41,24 +41,12 @@ class StatusDashboard extends Component
 
     public function toggleServer(int $serverId): void
     {
-        if (in_array($serverId, $this->expandedServers)) {
-            $this->expandedServers = array_values(array_diff($this->expandedServers, [$serverId]));
-
-            return;
-        }
-
-        $this->expandedServers[] = $serverId;
+        $this->expandedServers = $this->toggleInArray($this->expandedServers, $serverId);
     }
 
     public function toggleSite(int $siteId): void
     {
-        if (in_array($siteId, $this->expandedSites)) {
-            $this->expandedSites = array_values(array_diff($this->expandedSites, [$siteId]));
-
-            return;
-        }
-
-        $this->expandedSites[] = $siteId;
+        $this->expandedSites = $this->toggleInArray($this->expandedSites, $siteId);
     }
 
     public function deploySite(int $siteId): void
@@ -100,7 +88,7 @@ class StatusDashboard extends Component
     public function onAccountSaved(): void
     {
         $this->view = 'dashboard';
-        $this->activeAccountId = Account::where('is_active', true)->latest()->first()?->id;
+        $this->activeAccountId = $this->defaultAccountId();
         $this->syncAll();
     }
 
@@ -132,7 +120,7 @@ class StatusDashboard extends Component
         $this->view = $view;
 
         if ($view === 'dashboard') {
-            $this->activeAccountId = Account::where('is_active', true)->first()?->id;
+            $this->activeAccountId = $this->defaultAccountId();
         }
     }
 
@@ -142,7 +130,7 @@ class StatusDashboard extends Component
     }
 
     #[Computed]
-    public function accounts()
+    public function accounts(): Collection
     {
         return Account::where('is_active', true)->get();
     }
@@ -154,11 +142,11 @@ class StatusDashboard extends Component
             return null;
         }
 
-        return Account::find($this->activeAccountId);
+        return $this->accounts->firstWhere('id', $this->activeAccountId);
     }
 
     #[Computed]
-    public function recentDeployments()
+    public function recentDeployments(): \Illuminate\Support\Collection
     {
         if (! $this->activeAccountId) {
             return collect();
@@ -170,19 +158,48 @@ class StatusDashboard extends Component
             ->get();
     }
 
-    public function render()
+    #[Computed]
+    public function projects(): Collection
+    {
+        if (! $this->activeAccount) {
+            return new Collection;
+        }
+
+        return $this->activeAccount->projects()->with(['servers.sites'])->get();
+    }
+
+    #[Computed]
+    public function unassignedServers(): Collection
+    {
+        if (! $this->activeAccount) {
+            return new Collection;
+        }
+
+        return $this->activeAccount->servers()->with('sites')->whereNull('project_id')->get();
+    }
+
+    public function render(): View
     {
         return view('livewire.status-dashboard');
     }
 
+    private function defaultAccountId(): ?int
+    {
+        return Account::where('is_active', true)->first()?->id;
+    }
+
     private function syncAll(): void
     {
-        $this->syncing = true;
-
         Account::where('is_active', true)
             ->each(fn (Account $account) => SyncAccountData::dispatchSync($account->id));
 
-        $this->lastSynced = 'just now';
-        $this->syncing = false;
+        $this->lastSynced = now()->format('g:i A');
+    }
+
+    private function toggleInArray(array $array, int $id): array
+    {
+        return in_array($id, $array)
+            ? array_values(array_diff($array, [$id]))
+            : [...$array, $id];
     }
 }

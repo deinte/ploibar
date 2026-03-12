@@ -6,6 +6,8 @@ use Domain\Account\Actions\DeleteAccountWithData;
 use Domain\Account\Actions\TestAccountConnection;
 use Domain\Account\Models\Account;
 use Domain\Sync\Jobs\SyncAccountData;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -80,12 +82,12 @@ class AccountManager extends Component
     }
 
     #[Computed]
-    public function accounts()
+    public function accounts(): Collection
     {
         return Account::all();
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.account-manager');
     }
@@ -113,7 +115,6 @@ class AccountManager extends Component
         $account = Account::create([
             'label' => $this->label,
             'api_token' => $this->apiToken,
-            'is_active' => true,
         ]);
 
         SyncAccountData::dispatchSync($account->id);

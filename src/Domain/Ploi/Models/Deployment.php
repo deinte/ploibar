@@ -2,12 +2,15 @@
 
 namespace Domain\Ploi\Models;
 
+use Domain\Ploi\Concerns\HasStatusColor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Deployment extends Model
 {
+    use HasStatusColor;
+
     protected $fillable = [
         'site_id', 'status', 'triggered_at', 'completed_at', 'source',
     ];
@@ -38,15 +41,5 @@ class Deployment extends Model
     public function triggeredAgo(): string
     {
         return $this->triggered_at->diffForHumans();
-    }
-
-    public function statusColor(): string
-    {
-        return match ($this->status) {
-            'completed' => '#34C759',
-            'pending', 'deploying' => '#FF9F0A',
-            'failed' => '#FF3B30',
-            default => '#8E8E93',
-        };
     }
 }

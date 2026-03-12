@@ -3,13 +3,14 @@
 namespace Domain\Sync\Actions;
 
 use Domain\Account\Models\Account;
-use Domain\Ploi\Models\Site;
 use Native\Desktop\Facades\Notification;
 
 class DetectStatusChanges
 {
     public function execute(Account $account, array $oldServerStatuses, array $oldSiteStatuses): void
     {
+        $account->load('servers.sites');
+
         foreach ($account->servers as $server) {
             $oldStatus = $oldServerStatuses[$server->id] ?? null;
 

@@ -10,5 +10,13 @@
 <body>
     <livewire:status-dashboard />
     @livewireScripts
+    <script>
+    function copyText(text, el) {
+        navigator.clipboard.writeText(text).then(() => {
+            el.classList.add('detail-copyable--copied');
+            setTimeout(() => el.classList.remove('detail-copyable--copied'), 1200);
+        });
+    }
+    </script>
 </body>
 </html>

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Listeners\SyncOnMenuBarOpen;
+use App\Livewire\AccountManager;
+use App\Livewire\StatusDashboard;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -17,8 +19,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Livewire::component('status-dashboard', \App\Livewire\StatusDashboard::class);
-        Livewire::component('account-manager', \App\Livewire\AccountManager::class);
+        Livewire::component('status-dashboard', StatusDashboard::class);
+        Livewire::component('account-manager', AccountManager::class);
 
         Event::listen(MenuBarShown::class, SyncOnMenuBarOpen::class);
     }

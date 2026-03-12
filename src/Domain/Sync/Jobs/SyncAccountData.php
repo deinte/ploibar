@@ -10,6 +10,8 @@ use Domain\Ploi\Models\Site;
 use Domain\Sync\Actions\DetectStatusChanges;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Ploi\Ploi;
 
 class SyncAccountData implements ShouldQueue
 {
@@ -30,7 +32,7 @@ class SyncAccountData implements ShouldQueue
         $ploi = $account->ploiClient();
 
         $oldServerStatuses = $account->servers()->pluck('status', 'id')->toArray();
-        $oldSiteStatuses = Site::whereIn('server_id', $account->servers()->pluck('id'))->pluck('status', 'id')->toArray();
+        $oldSiteStatuses = Site::whereIn('server_id', array_keys($oldServerStatuses))->pluck('status', 'id')->toArray();
 
         $this->syncServers($account, $ploi);
         $this->syncProjects($account, $ploi);
@@ -39,12 +41,17 @@ class SyncAccountData implements ShouldQueue
         $detectStatusChanges->execute($account, $oldServerStatuses, $oldSiteStatuses);
     }
 
-    private function syncServers(Account $account, \Ploi\Ploi $ploi): void
+    private function syncServers(Account $account, Ploi $ploi): void
     {
         try {
             $response = $ploi->servers()->get();
             $servers = collect($response->getData() ?? []);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('SyncAccountData: failed to fetch servers', [
+                'account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return;
         }
 
@@ -70,22 +77,27 @@ class SyncAccountData implements ShouldQueue
         $account->servers()->whereNotIn('id', $syncedIds)->delete();
     }
 
-    private function syncSitesForServer(Server $server, \Ploi\Ploi $ploi): void
+    private function syncSitesForServer(Server $server, Ploi $ploi): void
     {
         try {
             $response = $ploi->servers($server->ploi_id)->sites()->get();
             $sites = collect($response->getData() ?? []);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('SyncAccountData: failed to fetch sites for server', [
+                'account_id' => $server->account_id,
+                'server_id' => $server->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return;
         }
+
+        $existingSites = Site::where('server_id', $server->id)->pluck('last_deploy_at', 'ploi_id');
 
         $syncedIds = [];
 
         foreach ($sites as $siteData) {
-            $oldDeployAt = Site::where('server_id', $server->id)
-                ->where('ploi_id', $siteData->id)
-                ->value('last_deploy_at');
-
+            $oldDeployAt = $existingSites->get($siteData->id);
             $newDeployAt = $siteData->last_deploy_at ?? null;
 
             $site = Site::updateOrCreate(
@@ -99,21 +111,10 @@ class SyncAccountData implements ShouldQueue
             );
 
             if ($newDeployAt && $newDeployAt !== $oldDeployAt) {
-                $existing = Deployment::where('site_id', $site->id)
-                    ->where('triggered_at', $newDeployAt)
-                    ->first();
-
-                if ($existing) {
-                    $existing->update(['status' => 'completed', 'completed_at' => now()]);
-                } else {
-                    Deployment::create([
-                        'site_id' => $site->id,
-                        'status' => 'completed',
-                        'triggered_at' => $newDeployAt,
-                        'completed_at' => now(),
-                        'source' => 'api',
-                    ]);
-                }
+                Deployment::updateOrCreate(
+                    ['site_id' => $site->id, 'triggered_at' => $newDeployAt],
+                    ['status' => 'completed', 'completed_at' => now(), 'source' => 'api'],
+                );
             }
 
             $syncedIds[] = $site->id;
@@ -122,12 +123,17 @@ class SyncAccountData implements ShouldQueue
         $server->sites()->whereNotIn('id', $syncedIds)->delete();
     }
 
-    private function syncProjects(Account $account, \Ploi\Ploi $ploi): void
+    private function syncProjects(Account $account, Ploi $ploi): void
     {
         try {
             $response = $ploi->projects()->get();
             $projects = collect($response->getData() ?? []);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('SyncAccountData: failed to fetch projects', [
+                'account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return;
         }
 

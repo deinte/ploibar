@@ -20,9 +20,4 @@ return new class extends Migration
             $table->index(['site_id', 'triggered_at']);
         });
     }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('deployments');
-    }
 };

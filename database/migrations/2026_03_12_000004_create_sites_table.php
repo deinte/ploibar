@@ -21,9 +21,4 @@ return new class extends Migration
             $table->unique(['server_id', 'ploi_id']);
         });
     }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('sites');
-    }
 };

@@ -3,12 +3,15 @@
 namespace Domain\Ploi\Models;
 
 use Domain\Account\Models\Account;
+use Domain\Ploi\Concerns\HasStatusColor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Server extends Model
 {
+    use HasStatusColor;
+
     protected $fillable = [
         'account_id', 'project_id', 'ploi_id', 'name',
         'ip_address', 'status', 'type', 'php_version',
@@ -34,15 +37,5 @@ class Server extends Model
     public function sites(): HasMany
     {
         return $this->hasMany(Site::class);
-    }
-
-    public function statusColor(): string
-    {
-        return match ($this->status) {
-            'running', 'active' => '#34C759',
-            'deploying', 'installing' => '#FF9F0A',
-            'stopped', 'error' => '#FF3B30',
-            default => '#8E8E93',
-        };
     }
 }

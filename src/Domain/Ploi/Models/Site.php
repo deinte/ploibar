@@ -2,12 +2,15 @@
 
 namespace Domain\Ploi\Models;
 
+use Domain\Ploi\Concerns\HasStatusColor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Site extends Model
 {
+    use HasStatusColor;
+
     protected $fillable = [
         'server_id', 'ploi_id', 'domain', 'status',
         'project_type', 'last_deploy_at',
@@ -29,15 +32,5 @@ class Site extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
-    }
-
-    public function statusColor(): string
-    {
-        return match ($this->status) {
-            'active', 'running' => '#34C759',
-            'deploying', 'installing' => '#FF9F0A',
-            'stopped', 'error' => '#FF3B30',
-            default => '#8E8E93',
-        };
     }
 }
