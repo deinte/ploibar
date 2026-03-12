@@ -1,0 +1,43 @@
+name: Build and Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-dev --optimize-autoloader
+      - run: npm install
+      - run: php artisan native:build
+      - name: Zip app bundle
+        run: cd build && zip -r PloiBar-${GITHUB_REF#refs/tags/v}-arm64.zip PloiBar.app
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/*.zip
+          generate_release_notes: true
+
+  update-cask:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: danteschrauwen/homebrew-ploibar
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Update cask version and SHA
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          ZIP_URL="https://github.com/danteschrauwen/ploibar/releases/download/v${VERSION}/PloiBar-${VERSION}-arm64.zip"
+          SHA=$(curl -sL "$ZIP_URL" | shasum -a 256 | cut -d' ' -f1)
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Casks/ploibar.rb
+          sed -i "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/ploibar.rb
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git commit -am "Update PloiBar to v${VERSION}"
+          git push
