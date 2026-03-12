@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'ploi' => [
+        'url' => 'https://ploi.io/panel',
+    ],
+
 ];

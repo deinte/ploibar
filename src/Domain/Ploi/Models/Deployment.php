@@ -12,7 +12,7 @@ class Deployment extends Model
     use HasStatusColor;
 
     protected $fillable = [
-        'site_id', 'status', 'triggered_at', 'completed_at', 'source',
+        'site_id', 'status', 'triggered_at', 'completed_at', 'source', 'commit_message',
     ];
 
     protected function casts(): array

@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Ploi\Ploi;
+use Throwable;
 
 class SyncAccountData implements ShouldQueue
 {
@@ -46,10 +47,10 @@ class SyncAccountData implements ShouldQueue
         try {
             $response = $ploi->servers()->get();
             $servers = collect($response->getData() ?? []);
-        } catch (\Throwable $e) {
+        } catch (Throwable $exception) {
             Log::warning('SyncAccountData: failed to fetch servers', [
                 'account_id' => $account->id,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
             return;
@@ -82,11 +83,11 @@ class SyncAccountData implements ShouldQueue
         try {
             $response = $ploi->servers($server->ploi_id)->sites()->get();
             $sites = collect($response->getData() ?? []);
-        } catch (\Throwable $e) {
+        } catch (Throwable $exception) {
             Log::warning('SyncAccountData: failed to fetch sites for server', [
                 'account_id' => $server->account_id,
                 'server_id' => $server->id,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
             return;
@@ -111,9 +112,16 @@ class SyncAccountData implements ShouldQueue
             );
 
             if ($newDeployAt && $newDeployAt !== $oldDeployAt) {
+                $commitMessage = $this->fetchLatestCommitMessage($ploi, $server->ploi_id, $siteData->id);
+
                 Deployment::updateOrCreate(
                     ['site_id' => $site->id, 'triggered_at' => $newDeployAt],
-                    ['status' => 'completed', 'completed_at' => now(), 'source' => 'api'],
+                    [
+                        'status' => 'completed',
+                        'completed_at' => now(),
+                        'source' => 'api',
+                        'commit_message' => $commitMessage,
+                    ],
                 );
             }
 
@@ -128,10 +136,10 @@ class SyncAccountData implements ShouldQueue
         try {
             $response = $ploi->projects()->get();
             $projects = collect($response->getData() ?? []);
-        } catch (\Throwable $e) {
+        } catch (Throwable $exception) {
             Log::warning('SyncAccountData: failed to fetch projects', [
                 'account_id' => $account->id,
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ]);
 
             return;
@@ -147,7 +155,6 @@ class SyncAccountData implements ShouldQueue
 
             $syncedIds[] = $project->id;
 
-            // Link servers to projects based on Ploi's project-server relationships
             if (isset($projectData->servers) && is_array($projectData->servers)) {
                 $serverPloiIds = collect($projectData->servers)->pluck('id');
                 $account->servers()
@@ -159,9 +166,40 @@ class SyncAccountData implements ShouldQueue
         $account->projects()->whereNotIn('id', $syncedIds)->delete();
     }
 
+    private function fetchLatestCommitMessage(Ploi $ploi, int $serverId, int $siteId): ?string
+    {
+        try {
+            $logResponse = $ploi->servers($serverId)->sites($siteId)->logs();
+            $entries = $logResponse->getData() ?? [];
+
+            if (empty($entries)) {
+                return null;
+            }
+
+            $latestEntry = $entries[0];
+            $endpoint = "servers/{$serverId}/sites/{$siteId}/log/{$latestEntry->id}";
+            $detail = $ploi->makeAPICall($endpoint);
+            $content = $detail->getData()->content ?? '';
+
+            return $this->extractCommitMessage($content);
+        } catch (Throwable $exception) {
+            Log::debug('fetchLatestCommitMessage failed', ['site_id' => $siteId, 'error' => $exception->getMessage()]);
+
+            return null;
+        }
+    }
+
+    private function extractCommitMessage(string $content): ?string
+    {
+        if (preg_match('/HEAD is now at [0-9a-f]{7,40}\s+(.+)/i', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return null;
+    }
+
     private function cleanupStaleRecords(Account $account): void
     {
-        // Orphan servers (project deleted) keep project_id null - that's fine
         $account->servers()
             ->whereNotNull('project_id')
             ->whereDoesntHave('project')

@@ -4,13 +4,16 @@ namespace App\Livewire;
 
 use Domain\Account\Models\Account;
 use Domain\Ploi\Models\Deployment;
+use Domain\Ploi\Models\Server;
 use Domain\Ploi\Models\Site;
 use Domain\Sync\Jobs\SyncAccountData;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Throwable;
 
 class StatusDashboard extends Component
 {
@@ -24,12 +27,32 @@ class StatusDashboard extends Component
 
     public ?string $lastSynced = null;
 
+    public string $search = '';
+
     /** @var array<int, bool> */
     public array $deployingSites = [];
 
     public function mount(): void
     {
         $this->activeAccountId = $this->defaultAccountId();
+    }
+
+    public function updatedSearch(string $value): void
+    {
+        $query = strtolower($value);
+
+        if (! $query) {
+            return;
+        }
+
+        $allServers = $this->projects->flatMap->servers->merge($this->unassignedServers);
+
+        $this->expandedServers = $allServers
+            ->filter(fn ($server) => str_contains(strtolower($server->name), $query)
+                || $server->sites->contains(fn ($site) => str_contains(strtolower($site->domain), $query)))
+            ->pluck('id')
+            ->values()
+            ->all();
     }
 
     public function selectAccount(int $accountId): void
@@ -71,17 +94,14 @@ class StatusDashboard extends Component
                 ->deploy();
 
             $deployment->update(['status' => 'deploying']);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             $deployment->update(['status' => 'failed', 'completed_at' => now()]);
             session()->flash('error', "Deploy failed: {$exception->getMessage()}");
         }
 
         unset($this->deployingSites[$siteId]);
 
-        // Auto-expand the site to show the deploy in history
-        if (! in_array($siteId, $this->expandedSites)) {
-            $this->expandedSites[] = $siteId;
-        }
+        $this->ensureExpanded($this->expandedSites, $siteId);
     }
 
     #[On('account-saved')]
@@ -106,13 +126,45 @@ class StatusDashboard extends Component
         $this->view = 'dashboard';
         $this->activeAccountId = $server->account_id;
 
-        if (! in_array($server->id, $this->expandedServers)) {
-            $this->expandedServers[] = $server->id;
-        }
+        $this->ensureExpanded($this->expandedServers, $server->id);
+        $this->ensureExpanded($this->expandedSites, $site->id);
+    }
 
-        if (! in_array($site->id, $this->expandedSites)) {
-            $this->expandedSites[] = $site->id;
-        }
+    public function togglePin(int $siteId): void
+    {
+        $site = Site::findOrFail($siteId);
+        $site->update(['is_pinned' => ! $site->is_pinned]);
+    }
+
+    public function openSiteUrl(int $siteId): void
+    {
+        $site = Site::findOrFail($siteId);
+        $url = str_starts_with($site->domain, 'http') ? $site->domain : "https://{$site->domain}";
+
+        $this->openInBrowser($url);
+    }
+
+    public function openInPloi(int $siteId): void
+    {
+        $site = Site::with('server')->findOrFail($siteId);
+
+        $base = config('services.ploi.url');
+
+        $this->openInBrowser("{$base}/servers/{$site->server->ploi_id}/sites/{$site->ploi_id}");
+    }
+
+    public function openServerInPloi(int $serverId): void
+    {
+        $server = Server::findOrFail($serverId);
+        $base = config('services.ploi.url');
+
+        $this->openInBrowser("{$base}/servers/{$server->ploi_id}");
+    }
+
+    private function openInBrowser(string $url): void
+    {
+        $escaped = escapeshellarg($url);
+        exec("open {$escaped}");
     }
 
     public function switchView(string $view): void
@@ -146,7 +198,7 @@ class StatusDashboard extends Component
     }
 
     #[Computed]
-    public function recentDeployments(): \Illuminate\Support\Collection
+    public function recentDeployments(): SupportCollection
     {
         if (! $this->activeAccountId) {
             return collect();
@@ -159,13 +211,26 @@ class StatusDashboard extends Component
     }
 
     #[Computed]
+    public function pinnedSites(): Collection
+    {
+        if (! $this->activeAccount) {
+            return new Collection;
+        }
+
+        return Site::with(['server', 'deployments'])
+            ->where('is_pinned', true)
+            ->whereHas('server', fn ($q) => $q->where('account_id', $this->activeAccountId))
+            ->get();
+    }
+
+    #[Computed]
     public function projects(): Collection
     {
         if (! $this->activeAccount) {
             return new Collection;
         }
 
-        return $this->activeAccount->projects()->with(['servers.sites'])->get();
+        return $this->activeAccount->projects()->with(['servers.sites.deployments'])->get();
     }
 
     #[Computed]
@@ -175,7 +240,37 @@ class StatusDashboard extends Component
             return new Collection;
         }
 
-        return $this->activeAccount->servers()->with('sites')->whereNull('project_id')->get();
+        return $this->activeAccount->servers()->with('sites.deployments')->whereNull('project_id')->get();
+    }
+
+    #[Computed]
+    public function hasSearchResults(): bool
+    {
+        $query = strtolower($this->search);
+
+        if (! $query) {
+            return true;
+        }
+
+        $matchesServer = fn ($server) => str_contains(strtolower($server->name), $query)
+            || $server->sites->contains(fn ($site) => str_contains(strtolower($site->domain), $query));
+
+        return $this->projects->flatMap->servers->contains($matchesServer)
+            || $this->unassignedServers->contains($matchesServer);
+    }
+
+    public function filterServers(Collection $servers): Collection
+    {
+        $query = strtolower($this->search);
+
+        if (! $query) {
+            return $servers;
+        }
+
+        return $servers->filter(
+            fn ($server) => str_contains(strtolower($server->name), $query)
+                || $server->sites->contains(fn ($site) => str_contains(strtolower($site->domain), $query))
+        );
     }
 
     public function render(): View
@@ -185,15 +280,15 @@ class StatusDashboard extends Component
 
     private function defaultAccountId(): ?int
     {
-        return Account::where('is_active', true)->first()?->id;
+        return $this->accounts->first()?->id;
     }
 
     private function syncAll(): void
     {
         Account::where('is_active', true)
-            ->each(fn (Account $account) => SyncAccountData::dispatchSync($account->id));
+            ->each(fn (Account $account) => SyncAccountData::dispatch($account->id));
 
-        $this->lastSynced = now()->format('g:i A');
+        $this->lastSynced = now()->format('H:i');
     }
 
     private function toggleInArray(array $array, int $id): array
@@ -201,5 +296,12 @@ class StatusDashboard extends Component
         return in_array($id, $array)
             ? array_values(array_diff($array, [$id]))
             : [...$array, $id];
+    }
+
+    private function ensureExpanded(array &$array, int $id): void
+    {
+        if (! in_array($id, $array)) {
+            $array[] = $id;
+        }
     }
 }

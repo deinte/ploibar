@@ -13,7 +13,7 @@ class Site extends Model
 
     protected $fillable = [
         'server_id', 'ploi_id', 'domain', 'status',
-        'project_type', 'last_deploy_at',
+        'project_type', 'last_deploy_at', 'is_pinned',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class Site extends Model
         return [
             'ploi_id' => 'integer',
             'last_deploy_at' => 'datetime',
+            'is_pinned' => 'boolean',
         ];
     }
 

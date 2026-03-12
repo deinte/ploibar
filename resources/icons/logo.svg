@@ -1,0 +1,22 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">PloiBar logo</title>
+  <desc id="desc">A clean continuous PloiBar wordmark inspired by minimalist developer tooling branding, with a subtle bar-chart accent.</desc>
+
+  <rect width="1200" height="320" fill="white"/>
+
+  <!-- subtle bar accent -->
+  <g transform="translate(104,86)">
+    <rect x="0" y="70" width="18" height="64" rx="9" fill="#1853DB" opacity="0.9"/>
+    <rect x="30" y="40" width="18" height="94" rx="9" fill="#1853DB" opacity="0.9"/>
+    <rect x="60" y="8" width="18" height="126" rx="9" fill="#1853DB"/>
+  </g>
+
+  <!-- continuous wordmark -->
+  <text x="210" y="205"
+        font-family="Helvetica Neue, Helvetica, Arial, Inter, sans-serif"
+        font-size="122"
+        letter-spacing="-4"
+        font-weight="700">
+    <tspan fill="#1F2A44">Ploi</tspan><tspan fill="#1853DB">Bar</tspan>
+  </text>
+</svg>

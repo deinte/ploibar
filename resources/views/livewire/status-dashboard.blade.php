@@ -24,7 +24,12 @@
                 @foreach($this->recentDeployments as $deployment)
                     <div class="activity-row" wire:click="navigateToSite({{ $deployment->id }})">
                         <span class="dot dot--sm" style="background:{{ $deployment->statusColor() }}"></span>
-                        <span class="activity-row__domain">{{ $deployment->site->domain }}</span>
+                        <div class="activity-row__main">
+                            <span class="activity-row__domain">{{ $deployment->site->domain }}</span>
+                            @if($deployment->commit_message)
+                                <span class="activity-row__commit" title="{{ $deployment->commit_message }}">{{ Str::limit($deployment->commit_message, 40) }}</span>
+                            @endif
+                        </div>
                         <span class="activity-row__time" title="{{ $deployment->triggered_at->format('M j, Y g:i:s A') }}">{{ $deployment->triggeredAgo() }}</span>
                         <span class="activity-row__server">{{ $deployment->site->server->name }}</span>
                     </div>
@@ -47,6 +52,15 @@
             </div>
         </div>
 
+        {{-- Search --}}
+        <div class="search-bar">
+            <svg class="search-bar__icon" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="10.5" y1="10.5" x2="15" y2="15" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <input class="search-bar__input" type="text" wire:model.live.debounce.200ms="search" placeholder="Filter servers and sites&hellip;">
+            @if($search)
+                <button class="search-bar__clear" wire:click="$set('search', '')">&times;</button>
+            @endif
+        </div>
+
         {{-- Content --}}
         <div class="scroll">
             <div wire:loading wire:target="refresh, onAccountSaved" class="sync-loading">
@@ -62,17 +76,45 @@
                     <button class="btn btn--primary" wire:click="switchView('accounts')">Add Account</button>
                 </div>
             @elseif($this->activeAccount)
-                @foreach($this->projects as $project)
-                    <div class="section">{{ $project->title }}</div>
-                    @foreach($project->servers as $server)
-                        @include('livewire.partials.server-row', ['server' => $server])
+                @php $query = strtolower($search); @endphp
+
+                {{-- Pinned sites --}}
+                @if(! $search && $this->pinnedSites->isNotEmpty())
+                    <div class="section section--pinned">
+                        <svg class="section__icon" viewBox="0 0 16 16"><path d="M9.828 1.172a2 2 0 0 1 2.828 0l2.172 2.172a2 2 0 0 1 0 2.828L12 9l-1 4-4-1-3.172-3.172a2 2 0 0 1 0-2.828l6-6z" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="1" y1="15" x2="6" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        Pinned
+                    </div>
+                    @foreach($this->pinnedSites as $pinnedSite)
+                        <div class="pinned-site">
+                            <span class="dot dot--sm" style="background:{{ $pinnedSite->statusColor() }}"></span>
+                            <span class="pinned-site__domain">{{ $pinnedSite->domain }}</span>
+                            <span class="pinned-site__server">{{ $pinnedSite->server->name }}</span>
+                            <button class="pinned-site__action" wire:click.stop="openSiteUrl({{ $pinnedSite->id }})" title="Open website">
+                                <svg viewBox="0 0 16 16"><path d="M6 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3M9 1h6v6M15 1L7 9" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <button class="pinned-site__action" wire:click.stop="deploySite({{ $pinnedSite->id }})" wire:confirm="Deploy {{ $pinnedSite->domain }}?" title="Deploy" wire:loading.attr="disabled" wire:target="deploySite({{ $pinnedSite->id }})">
+                                <svg wire:loading.remove wire:target="deploySite({{ $pinnedSite->id }})" viewBox="0 0 16 16"><path d="M8 1v10M4 5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <svg wire:loading wire:target="deploySite({{ $pinnedSite->id }})" class="icon-deploy--spin" viewBox="0 0 16 16"><path d="M13.65 2.35A7.96 7.96 0 0 0 8 0a8 8 0 1 0 7.74 10h-2.1A6 6 0 1 1 8 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
                     @endforeach
+                @endif
+
+                @foreach($this->projects as $project)
+                    @php $filteredServers = $this->filterServers($project->servers); @endphp
+                    @if($filteredServers->isNotEmpty())
+                        <div class="section">{{ $project->title }}</div>
+                        @foreach($filteredServers as $server)
+                            @include('livewire.partials.server-row', ['server' => $server, 'searchQuery' => $query])
+                        @endforeach
+                    @endif
                 @endforeach
 
-                @if($this->unassignedServers->isNotEmpty())
+                @php $filteredUnassigned = $this->filterServers($this->unassignedServers); @endphp
+                @if($filteredUnassigned->isNotEmpty())
                     <div class="section">Unassigned</div>
-                    @foreach($this->unassignedServers as $server)
-                        @include('livewire.partials.server-row', ['server' => $server])
+                    @foreach($filteredUnassigned as $server)
+                        @include('livewire.partials.server-row', ['server' => $server, 'searchQuery' => $query])
                     @endforeach
                 @endif
 
@@ -81,6 +123,11 @@
                         <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="7" rx="1"/><rect x="2" y="14" width="20" height="7" rx="1"/><circle cx="6" cy="6.5" r="1"/><circle cx="6" cy="17.5" r="1"/></svg>
                         <div class="empty__title">No servers found</div>
                         <div class="empty__sub">No servers found for this account</div>
+                    </div>
+                @elseif($search && ! $this->hasSearchResults)
+                    <div class="empty">
+                        <div class="empty__title">No results</div>
+                        <div class="empty__sub">No servers or sites match "{{ $search }}"</div>
                     </div>
                 @endif
             @endif

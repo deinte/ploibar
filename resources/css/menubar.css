@@ -771,12 +771,22 @@ input, textarea { -webkit-user-select: text; user-select: text; }
     height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
+    margin-right: 0;
 }
 
 .deploy-row__status {
     color: var(--label-secondary);
     text-transform: lowercase;
     flex-shrink: 0;
+}
+
+.deploy-row__commit {
+    color: var(--label-secondary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .deploy-row__time {
@@ -799,8 +809,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .activity-row {
     display: flex;
     align-items: center;
-    height: 34px;
-    padding: 0 14px;
+    min-height: 34px;
+    padding: 4px 14px;
     gap: 8px;
     cursor: pointer;
     transition: background 0.12s;
@@ -808,13 +818,28 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 .activity-row:hover { background: var(--hover); }
 
-.activity-row__domain {
+.activity-row__main {
     flex: 1;
+    min-width: 0;
+}
+
+.activity-row__domain {
     font-size: 12px;
     color: var(--label);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: block;
+}
+
+.activity-row__commit {
+    font-size: 10px;
+    color: var(--label-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    margin-top: 1px;
 }
 
 .activity-row__time {
@@ -845,3 +870,186 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 
 .icon-activity { width: 13px; height: 13px; }
+
+
+/* ━━ Search bar ━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px;
+    border-bottom: 0.5px solid var(--separator);
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+.search-bar__icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--label-tertiary);
+}
+
+.search-bar__input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 12px;
+    font-family: var(--font);
+    color: var(--label);
+    min-width: 0;
+}
+
+.search-bar__input::placeholder { color: var(--label-quaternary); }
+
+.search-bar__clear {
+    background: none;
+    border: none;
+    color: var(--label-tertiary);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 3px;
+    transition: color 0.12s;
+}
+
+.search-bar__clear:hover { color: var(--label); }
+
+
+/* ━━ Pinned sites ━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.section--pinned {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.section__icon {
+    width: 10px;
+    height: 10px;
+    color: var(--label-tertiary);
+}
+
+.pinned-site {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 6px 0 14px;
+    gap: 6px;
+    transition: background 0.12s;
+    cursor: default;
+}
+
+.pinned-site:hover { background: var(--hover); }
+
+.pinned-site__domain {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--label);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.pinned-site__server {
+    font-size: 10px;
+    color: var(--label-quaternary);
+    flex-shrink: 0;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pinned-site__action {
+    background: none;
+    border: none;
+    color: var(--label-quaternary);
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 4px;
+    line-height: 0;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+
+.pinned-site__action svg { width: 12px; height: 12px; }
+
+.pinned-site:hover .pinned-site__action { opacity: 1; }
+.pinned-site__action:hover { color: var(--accent); background: var(--selected); }
+
+
+/* ━━ Site pin badge ━━━━━━━━━━━━━━━━━━━━━ */
+
+.site__pin-badge {
+    color: var(--accent);
+    line-height: 0;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.site__pin-badge svg { width: 9px; height: 9px; }
+
+
+/* ━━ Site expanded actions ━━━━━━━━━━━━━━ */
+
+.site-actions {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.site-actions__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 26px;
+    padding: 0 8px;
+    background: var(--control-bg);
+    color: var(--label-secondary);
+    border: 0.5px solid var(--control-border);
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+}
+
+.site-actions__btn svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+.site-actions__btn:hover { background: var(--active); color: var(--label); }
+.site-actions__btn:active { transform: scale(0.97); }
+
+.site-actions__btn--primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    flex: 1;
+}
+
+.site-actions__btn--primary:hover { background: var(--accent-hover); color: var(--accent-text); }
+.site-actions__btn--primary .icon-deploy { width: 11px; height: 11px; }
+
+
+/* ━━ Server Ploi link ━━━━━━━━━━━━━━━━━━━ */
+
+.detail-copyable--link {
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0 10px;
+    gap: 4px;
+}
+
+.detail-copyable--link:hover { color: var(--accent); }
+
+.icon-external { width: 11px; height: 11px; }
+
+
