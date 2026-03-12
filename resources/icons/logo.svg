@@ -2,7 +2,8 @@
   <title id="title">PloiBar logo</title>
   <desc id="desc">A clean continuous PloiBar wordmark inspired by minimalist developer tooling branding, with a subtle bar-chart accent.</desc>
 
-  <rect width="1200" height="320" fill="white"/>
+
+  <rect width="1200" height="320" rx="16" fill="white"/>
 
   <!-- subtle bar accent -->
   <g transform="translate(104,86)">

@@ -1,9 +1,17 @@
-# PloiBar
+<p align="center">
+  <img src="public/icon.png" alt="PloiBar" width="128">
+</p>
 
-A macOS menu bar app for monitoring and managing your [Ploi.io](https://ploi.io) servers.
+<h1 align="center">PloiBar</h1>
 
-[![CI](https://github.com/deinte/ploibar/actions/workflows/ci.yml/badge.svg)](https://github.com/deinte/ploibar/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  A macOS menu bar app for monitoring and managing your <a href="https://ploi.io">Ploi.io</a> servers.
+</p>
+
+<p align="center">
+  <a href="https://github.com/deinte/ploibar/actions/workflows/ci.yml"><img src="https://github.com/deinte/ploibar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
 
 ## Features
 
