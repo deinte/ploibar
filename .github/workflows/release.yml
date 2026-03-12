@@ -28,12 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: danteschrauwen/homebrew-ploibar
+          repository: deinte/homebrew-ploibar
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       - name: Update cask version and SHA
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          ZIP_URL="https://github.com/danteschrauwen/ploibar/releases/download/v${VERSION}/PloiBar-${VERSION}-arm64.zip"
+          ZIP_URL="https://github.com/deinte/ploibar/releases/download/v${VERSION}/PloiBar-${VERSION}-arm64.zip"
           SHA=$(curl -sL "$ZIP_URL" | shasum -a 256 | cut -d' ' -f1)
           sed -i "s/version \".*\"/version \"${VERSION}\"/" Casks/ploibar.rb
           sed -i "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/ploibar.rb
