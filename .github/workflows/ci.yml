@@ -18,6 +18,9 @@ jobs:
           php-version: '8.4'
           coverage: none
 
+      - name: Prepare Laravel directories
+        run: mkdir -p bootstrap/cache storage/framework/{sessions,views,cache}
+
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
 
@@ -48,16 +51,14 @@ jobs:
           php-version: '8.4'
           coverage: none
 
+      - name: Prepare Laravel directories
+        run: mkdir -p bootstrap/cache storage/framework/{sessions,views,cache}
+
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
 
       - name: Install npm dependencies
         run: npm ci
-
-      - name: Generate app key
-        run: php artisan key:generate
-        env:
-          APP_KEY: base64:dGVzdGtleWZvcmNpdGVzdGtleWZvcmNpMTIzNDU2Nzg=
 
       - name: Native build
         run: php artisan native:build
