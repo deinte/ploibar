@@ -2,6 +2,8 @@
     $isExpanded = in_array($server->id, $expandedServers);
     $siteCount = $server->sites->count();
     $query = $searchQuery ?? '';
+    $monitoringStatus = $server->hasMonitoring() ? $server->monitoringStatus() : null;
+    $highestMetric = $monitoringStatus && $monitoringStatus !== 'healthy' ? $server->highestUsageMetric() : null;
 @endphp
 
 <div class="row" wire:click="toggleServer({{ $server->id }})">
@@ -10,6 +12,10 @@
     </span>
     <span class="dot" style="background:{{ $server->statusColor() }}"></span>
     <span class="row__name">{{ $server->name }}</span>
+    @if($monitoringStatus && $monitoringStatus !== 'healthy')
+        @php $iconColor = $monitoringStatus === 'critical' ? '#FF3B30' : '#FF9F0A'; @endphp
+        <svg class="monitor-icon" width="12" height="12" viewBox="0 0 16 16" title="{{ $highestMetric['label'] }} at {{ round($highestMetric['value']) }}%"><path d="M8.7 1.6a.8.8 0 0 0-1.4 0L1.05 13.1a.8.8 0 0 0 .7 1.2h12.5a.8.8 0 0 0 .7-1.2L8.7 1.6Z" fill="{{ $iconColor }}"/><rect x="7.2" y="5.5" width="1.6" height="4.5" rx=".8" fill="#fff"/><circle cx="8" cy="11.8" r=".9" fill="#fff"/></svg>
+    @endif
     <span class="row__meta">{{ $siteCount }} {{ str('site')->plural($siteCount) }}</span>
 </div>
 
@@ -40,6 +46,31 @@
                 <svg class="icon-external" viewBox="0 0 16 16"><path d="M6 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3M9 1h6v6M15 1L7 9" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
         </div>
+
+        {{-- Monitoring --}}
+        @if($server->hasMonitoring())
+            <div class="server-monitor">
+                @php
+                    $metrics = [
+                        ['label' => 'CPU', 'value' => $server->cpuUsage()],
+                        ['label' => 'MEM', 'value' => $server->memoryUsage()],
+                        ['label' => 'DISK', 'value' => $server->diskUsage()],
+                    ];
+                @endphp
+                @foreach($metrics as $metric)
+                    @if($metric['value'] !== null)
+                        @php
+                            $val = round($metric['value']);
+                            $color = $val > 90 ? 'var(--st-err)' : ($val > 80 ? 'var(--st-warn)' : 'var(--st-run)');
+                        @endphp
+                        <div class="monitor-metric">
+                            <span class="monitor-metric__label">{{ $metric['label'] }}</span>
+                            <span class="monitor-metric__pct" style="color:{{ $color }}">{{ $val }}%</span>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+        @endif
 
         {{-- Sites --}}
         @forelse($server->sites as $site)

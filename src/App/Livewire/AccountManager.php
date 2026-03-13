@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Domain\Account\Actions\DeleteAccountWithData;
 use Domain\Account\Actions\TestAccountConnection;
 use Domain\Account\Models\Account;
+use Domain\Setting\Setting;
 use Domain\Sync\Jobs\SyncAccountData;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\View\View;
@@ -18,6 +19,24 @@ class AccountManager extends Component
     public string $apiToken = '';
 
     public ?int $editingAccountId = null;
+
+    public int $pollInterval = 60;
+
+    public function mount(): void
+    {
+        $this->pollInterval = Setting::pollInterval();
+    }
+
+    public function updatePollInterval(int $seconds): void
+    {
+        if (! in_array($seconds, [0, 30, 60, 120, 300])) {
+            return;
+        }
+
+        $this->pollInterval = $seconds;
+        Setting::set('poll_interval', $seconds);
+        $this->dispatch('poll-interval-updated', seconds: $seconds);
+    }
 
     public function editAccount(int $accountId): void
     {

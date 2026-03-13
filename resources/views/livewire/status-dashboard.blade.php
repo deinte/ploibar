@@ -1,4 +1,4 @@
-<div class="app" wire:poll.60s="refresh">
+<div class="app" @if($pollInterval > 0) wire:poll.{{ $pollInterval }}s="refresh" @endif>
     @if($view === 'accounts')
         <livewire:account-manager @back="switchView('dashboard')" />
     @endif
@@ -40,7 +40,7 @@
 
     @if($view === 'dashboard')
         {{-- Tab bar --}}
-        <div class="tabs">
+        <div class="tabs" tabindex="-1">
             @foreach($this->accounts as $account)
                 <div
                     class="tab {{ $activeAccountId === $account->id ? 'tab--active' : '' }}"
@@ -60,6 +60,25 @@
                 <button class="search-bar__clear" wire:click="$set('search', '')">&times;</button>
             @endif
         </div>
+
+        {{-- Usage warning banner --}}
+        @if($this->serversWithHighUsage->isNotEmpty())
+            @foreach($this->serversWithHighUsage as $warnServer)
+                @php
+                    $warnStatus = $warnServer->monitoringStatus();
+                    $highest = $warnServer->highestUsageMetric();
+                    $isCritical = $warnStatus === 'critical';
+                @endphp
+                <div
+                    class="usage-banner {{ $isCritical ? 'usage-banner--critical' : '' }}"
+                    wire:click="toggleServer({{ $warnServer->id }})"
+                >
+                    <svg class="usage-banner__icon" width="12" height="12" viewBox="0 0 16 16"><path d="M8.7 1.6a.8.8 0 0 0-1.4 0L1.05 13.1a.8.8 0 0 0 .7 1.2h12.5a.8.8 0 0 0 .7-1.2L8.7 1.6Z" fill="currentColor"/><rect x="7.2" y="5.5" width="1.6" height="4.5" rx=".8" fill="#fff"/><circle cx="8" cy="11.8" r=".9" fill="#fff"/></svg>
+                    <span class="usage-banner__text"><strong>{{ $warnServer->name }}</strong> &middot; {{ $highest['label'] }} {{ round($highest['value']) }}%</span>
+                    <span class="usage-banner__chevron"></span>
+                </div>
+            @endforeach
+        @endif
 
         {{-- Content --}}
         <div class="scroll">

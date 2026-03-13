@@ -6,6 +6,7 @@ use Domain\Account\Models\Account;
 use Domain\Ploi\Models\Deployment;
 use Domain\Ploi\Models\Server;
 use Domain\Ploi\Models\Site;
+use Domain\Setting\Setting;
 use Domain\Sync\Jobs\SyncAccountData;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -32,9 +33,18 @@ class StatusDashboard extends Component
     /** @var array<int, bool> */
     public array $deployingSites = [];
 
+    public int $pollInterval = 60;
+
     public function mount(): void
     {
         $this->activeAccountId = $this->defaultAccountId();
+        $this->pollInterval = Setting::pollInterval();
+    }
+
+    #[On('poll-interval-updated')]
+    public function onPollIntervalUpdated(int $seconds): void
+    {
+        $this->pollInterval = $seconds;
     }
 
     public function updatedSearch(string $value): void
@@ -241,6 +251,16 @@ class StatusDashboard extends Component
         }
 
         return $this->activeAccount->servers()->with('sites.deployments')->whereNull('project_id')->get();
+    }
+
+    #[Computed]
+    public function serversWithHighUsage(): SupportCollection
+    {
+        return $this->projects
+            ->flatMap->servers
+            ->merge($this->unassignedServers)
+            ->filter(fn (Server $server) => $server->hasMonitoring()
+                && in_array($server->monitoringStatus(), ['warning', 'critical']));
     }
 
     #[Computed]

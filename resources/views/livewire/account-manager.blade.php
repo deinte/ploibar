@@ -69,5 +69,22 @@
                 </button>
             </div>
         </div>
+
+        {{-- Preferences --}}
+        <div class="form">
+            <div class="form__divider">Preferences</div>
+
+            <div class="pref-row">
+                <span class="pref-row__label">Auto-refresh</span>
+                <div class="segmented">
+                    @foreach([30 => '30s', 60 => '1m', 120 => '2m', 300 => '5m', 0 => 'Off'] as $value => $label)
+                        <button
+                            class="segmented__btn {{ $pollInterval === $value ? 'segmented__btn--active' : '' }}"
+                            wire:click="updatePollInterval({{ $value }})"
+                        >{{ $label }}</button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
     </div>
 </div>

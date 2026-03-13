@@ -73,6 +73,7 @@ class SyncAccountData implements ShouldQueue
             $syncedIds[] = $server->id;
 
             $this->syncSitesForServer($server, $ploi);
+            $this->syncMonitoringForServer($server, $ploi);
         }
 
         $account->servers()->whereNotIn('id', $syncedIds)->delete();
@@ -196,6 +197,27 @@ class SyncAccountData implements ShouldQueue
         }
 
         return null;
+    }
+
+    private function syncMonitoringForServer(Server $server, Ploi $ploi): void
+    {
+        try {
+            $response = $ploi->servers($server->ploi_id)->monitoring();
+            $data = $response->getData() ?? [];
+
+            if (! empty($data)) {
+                $latest = (array) (is_array($data) ? end($data) : $data);
+
+                if ($server->monitoring_data !== $latest) {
+                    $server->update(['monitoring_data' => $latest]);
+                }
+            }
+        } catch (Throwable $exception) {
+            Log::debug('SyncAccountData: failed to fetch monitoring for server', [
+                'server_id' => $server->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function cleanupStaleRecords(Account $account): void
