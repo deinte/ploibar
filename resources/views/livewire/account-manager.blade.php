@@ -74,13 +74,26 @@
         <div class="form">
             <div class="form__divider">Preferences</div>
 
-            <div class="pref-row">
-                <span class="pref-row__label">Auto-refresh</span>
-                <div class="segmented">
+            <div class="pref-field">
+                <div class="pref-field__header">
+                    <span class="pref-field__label">Auto-refresh</span>
+                    <span class="pref-field__value">
+                        @if($pollInterval === 0)
+                            Off
+                        @elseif($pollInterval < 60)
+                            {{ $pollInterval }}s
+                        @else
+                            {{ $pollInterval / 60 }}m
+                        @endif
+                    </span>
+                </div>
+                <div class="segmented" role="radiogroup" aria-label="Polling interval">
                     @foreach([30 => '30s', 60 => '1m', 120 => '2m', 300 => '5m', 0 => 'Off'] as $value => $label)
                         <button
                             class="segmented__btn {{ $pollInterval === $value ? 'segmented__btn--active' : '' }}"
                             wire:click="updatePollInterval({{ $value }})"
+                            role="radio"
+                            aria-checked="{{ $pollInterval === $value ? 'true' : 'false' }}"
                         >{{ $label }}</button>
                     @endforeach
                 </div>
