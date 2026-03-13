@@ -1,4 +1,4 @@
-<div class="app" @if($pollInterval > 0) wire:poll.{{ $pollInterval }}s="refresh" @endif>
+<div class="app" @if($pollInterval > 0) wire:poll.{{ $pollInterval }}s="pollRefresh" @endif>
     @if($view === 'accounts')
         <livewire:account-manager @back="switchView('dashboard')" />
     @endif

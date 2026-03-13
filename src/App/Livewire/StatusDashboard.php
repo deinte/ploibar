@@ -35,6 +35,8 @@ class StatusDashboard extends Component
 
     public int $pollInterval = 60;
 
+    public ?int $lastSyncDispatchedAt = null;
+
     public function mount(): void
     {
         $this->activeAccountId = $this->defaultAccountId();
@@ -118,8 +120,14 @@ class StatusDashboard extends Component
     public function onAccountSaved(): void
     {
         $this->view = 'dashboard';
+        $this->clearComputedCache();
         $this->activeAccountId = $this->defaultAccountId();
-        $this->syncAll();
+
+        Account::where('is_active', true)
+            ->each(fn (Account $account) => SyncAccountData::dispatch($account->id));
+
+        $this->lastSynced = now()->format('H:i');
+        $this->lastSyncDispatchedAt = now()->timestamp;
     }
 
     public function navigateToSite(int $deploymentId): void
@@ -188,7 +196,26 @@ class StatusDashboard extends Component
 
     public function refresh(): void
     {
-        $this->syncAll();
+        $this->clearComputedCache();
+
+        Account::where('is_active', true)
+            ->each(fn (Account $account) => SyncAccountData::dispatchSync($account->id));
+
+        $this->lastSynced = now()->format('H:i');
+        $this->lastSyncDispatchedAt = now()->timestamp;
+    }
+
+    public function pollRefresh(): void
+    {
+        if ($this->shouldDispatchSync()) {
+            Account::where('is_active', true)
+                ->each(fn (Account $account) => SyncAccountData::dispatch($account->id));
+
+            $this->lastSyncDispatchedAt = now()->timestamp;
+        }
+
+        $this->clearComputedCache();
+        $this->lastSynced = now()->format('H:i');
     }
 
     #[Computed]
@@ -303,12 +330,26 @@ class StatusDashboard extends Component
         return $this->accounts->first()?->id;
     }
 
-    private function syncAll(): void
+    private function shouldDispatchSync(): bool
     {
-        Account::where('is_active', true)
-            ->each(fn (Account $account) => SyncAccountData::dispatch($account->id));
+        if ($this->lastSyncDispatchedAt === null) {
+            return true;
+        }
 
-        $this->lastSynced = now()->format('H:i');
+        return (now()->timestamp - $this->lastSyncDispatchedAt) >= max($this->pollInterval, 30);
+    }
+
+    private function clearComputedCache(): void
+    {
+        unset(
+            $this->accounts,
+            $this->activeAccount,
+            $this->projects,
+            $this->unassignedServers,
+            $this->serversWithHighUsage,
+            $this->pinnedSites,
+            $this->recentDeployments,
+        );
     }
 
     private function toggleInArray(array $array, int $id): array
